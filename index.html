@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BloodFinder — Bangladesh's trusted platform to find verified blood donors, request emergency blood, and save lives. Search by blood group, district, and division.">
+  <meta name="keywords" content="blood donation, blood donor, Bangladesh, blood bank, emergency blood, O+, A+, B+, AB+, Dhaka, Chittagong">
+  <meta name="author" content="BloodFinder Bangladesh">
+  <title>BloodFinder — Find Blood Donors & Save Lives in Bangladesh</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Favicon (inline SVG data URI) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩸</text></svg>">
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Google Identity Services (GSI) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header" id="header">
+    <div class="container">
+      <a href="#" class="logo">
+        <div class="logo-icon">🩸</div>
+        Blood<span>Finder</span>
+      </a>
+
+      <nav class="nav-links" id="navLinks">
+        <a href="#hero" class="active">Home</a>
+        <a href="#donors">Find Donors</a>
+        <a href="#emergency">Emergency Feed</a>
+        <a href="#bloodBanks">Blood Banks</a>
+        <a href="#" data-open-register>Register</a>
+        <button id="nav-signin-btn" class="btn btn-outline">Sign In</button>
+        <button class="btn-cta" data-open-request>🚨 Request Blood Now</button>
+      </nav>
+
+      <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== HERO SECTION ===== -->
+  <section class="hero" id="hero">
+    <div class="container">
+      <div class="hero-badge">
+        <span class="pulse-dot"></span>
+        Saving lives across Bangladesh
+      </div>
+
+      <h1 class="hero-title">
+        Every Drop Counts.<br>
+        Be a <span class="highlight">Lifesaver</span> Today.
+      </h1>
+
+      <p class="hero-subtitle">
+        Find verified blood donors near you in seconds. Connect, donate, and help save lives — because someone's life depends on your generosity.
+      </p>
+
+      <!-- Smart Search Box -->
+      <div class="hero-search">
+        <div class="search-grid">
+          <div class="search-field">
+            <label for="searchBlood">Blood Group</label>
+            <select id="searchBlood" aria-label="Filter by Blood Group">
+              <option value="">All Groups</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div class="search-field">
+            <label for="searchDivision">Division</label>
+            <input type="text" id="searchDivision" placeholder="Enter Division" aria-label="Filter by Division" autocomplete="off">
+          </div>
+          <div class="search-field">
+            <label for="searchDistrict">District</label>
+            <input type="text" id="searchDistrict" placeholder="Enter District" aria-label="Filter by District" autocomplete="off">
+          </div>
+          <button class="btn-location" id="btnGeoLocation" title="Auto-detect my location" aria-label="Auto-detect my location">📍 Location</button>
+          <button class="btn-search" id="btnSearch" aria-label="Search donors">🔍 Search</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LIVE IMPACT STATS ===== -->
+  <section class="stats" id="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card animate-on-scroll">
+          <div class="stat-icon red">❤️</div>
+          <div>
+            <div class="stat-number" id="count-donors" data-suffix="+">0</div>
+            <div class="stat-label">Registered Donors</div>
+          </div>
+        </div>
+        <div class="stat-card animate-on-scroll">
+          <div class="stat-icon blue">🚨</div>
+          <div>
+            <div class="stat-number" id="count-requests">0</div>
+            <div class="stat-label">Active Requests</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== DONOR CARDS SECTION ===== -->
+  <section class="donors" id="donors">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">🔎 Donor Directory</span>
+        <h2 class="section-title">Find Your Blood Match</h2>
+        <p class="section-subtitle">Browse verified donors ready to help. Filter by blood group, division, or district to find your perfect match.</p>
+      </div>
+      <div class="donors-grid" id="donorsGrid">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ELIGIBILITY CALCULATOR ===== -->
+  <section class="eligibility" id="eligibility">
+    <div class="container">
+      <div class="eligibility-card animate-on-scroll">
+        <div class="calc-icon">🧮</div>
+        <h2>Donation Eligibility Check</h2>
+        <p>Enter your last donation date to see if you're eligible to donate blood today.</p>
+        <div class="calc-form">
+          <input type="date" id="calcLastDonation" aria-label="Last donation date">
+          <button class="btn-calculate" id="btnCalcEligibility">Check Now</button>
+        </div>
+        <div class="calc-result" id="calcResult"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOSPITAL NEARBY DONOR SEARCH ===== -->
+  <section class="nearby-search" id="emergency">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">📍 Nearby Search</span>
+        <h2 class="section-title">Find Donors Near Your Hospital</h2>
+        <p class="section-subtitle">Enter a hospital name or nearby area to instantly find blood donors in that location.</p>
+      </div>
+
+      <div class="nearby-search-card">
+        <div class="nearby-search-form">
+          <div class="nearby-input-group">
+            <span class="nearby-input-icon">🏥</span>
+            <input
+              type="text"
+              id="hospital-search-input"
+              class="nearby-input"
+              placeholder="Enter Hospital Name or Nearby Area, e.g. Chittagong Medical"
+              autocomplete="off"
+              aria-label="Enter hospital or area name"
+            >
+          </div>
+          <select id="search-radius" class="nearby-radius-select" aria-label="Search distance radius">
+            <option value="2">Within 2 km</option>
+            <option value="5" selected>Within 5 km</option>
+            <option value="all">All Nearby Area</option>
+          </select>
+          <button id="btn-geo-nearby" class="btn-geo-nearby" title="Use my current GPS location" aria-label="Use my current GPS location">
+            📍 Near Me
+          </button>
+          <button id="btn-search-nearby" class="btn-nearby-search" aria-label="Search nearby donors">
+            🔍 Search Nearby Donors
+          </button>
+        </div>
+        <div id="hospital-donors-results" class="hospital-results-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== BLOOD BANK DIRECTORY ===== -->
+  <section class="blood-banks" id="bloodBanks">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">🏛️ Directory</span>
+        <h2 class="section-title">Blood Bank Directory</h2>
+        <p class="section-subtitle">Find major blood banks across Bangladesh with quick call access and service information.</p>
+      </div>
+      <div class="banks-grid" id="banksGrid">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REGISTRATION MODAL ===== -->
+  <div class="modal-overlay" id="registerModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>🩸 Register as Donor</h2>
+        <button class="modal-close" id="closeRegister" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="regName">Full Name *</label>
+            <input type="text" id="regName" placeholder="e.g. Rakesh sen" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="regPhone">Phone Number *</label>
+              <input type="tel" id="regPhone" placeholder="+880 1XXX-XXXXXX" required>
+            </div>
+            <div class="form-group">
+              <label for="regBlood">Blood Group *</label>
+              <select id="regBlood" required>
+                <option value="">Select</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="regDistrict">District *</label>
+              <select id="regDistrict" required>
+                <option value="">Select Division</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="regUpazila">Upazila</label>
+              <input type="text" id="regUpazila" placeholder="e.g. Mirpur">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="regLastDonation">Last Donation Date</label>
+            <input type="date" id="regLastDonation">
+          </div>
+          <div class="form-group">
+            <div class="checkbox-group">
+              <input type="checkbox" id="regAgree">
+              <label for="regAgree">I agree that my information will be shared with blood seekers on BloodFinder. My privacy is respected, and data will not be sold or misused.</label>
+            </div>
+          </div>
+          <button type="submit" class="btn-submit">Register as Donor</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REQUEST BLOOD MODAL ===== -->
+  <div class="modal-overlay" id="requestModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>🚨 Request Blood</h2>
+        <button class="modal-close" id="closeRequest" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="requestForm">
+          <div class="form-group">
+            <label for="reqPatient">Patient Name *</label>
+            <input type="text" id="reqPatient" placeholder="Patient's full name" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reqBlood">Blood Group Needed *</label>
+              <select id="reqBlood" required>
+                <option value="">Select</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reqBags">Bags Needed *</label>
+              <input type="number" id="reqBags" min="1" max="20" placeholder="e.g. 2" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="reqHospital">Hospital Name *</label>
+            <input type="text" id="reqHospital" placeholder="e.g. Dhaka Medical College" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reqUrgency">Urgency Level *</label>
+              <select id="reqUrgency" required>
+                <option value="">Select</option>
+                <option value="Immediate">🚨 Immediate</option>
+                <option value="Within 12 Hours">⚠️ Within 12 Hours</option>
+                <option value="Within 24 Hours">📋 Within 24 Hours</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reqContact">Contact Number *</label>
+              <input type="tel" id="reqContact" placeholder="+880 1XXX-XXXXXX" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="reqNote">Additional Notes</label>
+            <textarea id="reqNote" placeholder="Any additional details about the patient or request..."></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Submit Urgent Request</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EMAIL / EMERGENCY SIGN-IN MODAL ===== -->
+  <div class="modal-overlay" id="signin-modal">
+    <div class="modal modal-signin">
+      <div class="modal-header">
+        <h2>⚡ Quick Emergency Access</h2>
+        <button class="modal-close" id="close-modal-btn" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="signin-desc">Enter your email or phone number for instant access to donor contact details. No passwords or OTP required.</p>
+        <form id="signin-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="user-email-input">Email or Phone Number *</label>
+            <input type="text" id="user-email-input" placeholder="e.g. 01712345678 or name@example.com" autocomplete="on" autofocus required>
+          </div>
+          <button type="submit" class="btn-submit btn-signin-continue" id="signin-submit-btn">Continue ➔</button>
+        </form>
+
+        <div class="signin-divider">
+          <span>OR</span>
+        </div>
+
+        <div id="g_id_signin_container"></div>
+
+        <button type="button" class="btn-google-signin" id="google-signin-btn">
+          <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <a href="#" class="logo">
+            <div class="logo-icon">🩸</div>
+            Blood<span>Finder</span>
+          </a>
+          <p>Bangladesh's trusted platform for connecting blood donors with those in need. Every drop counts — be the reason someone lives.</p>
+          <div class="footer-social">
+            <a href="#" aria-label="Facebook">📘</a>
+            <a href="#" aria-label="Twitter">🐦</a>
+            <a href="#" aria-label="Instagram">📷</a>
+            <a href="#" aria-label="YouTube">🎥</a>
+          </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="#hero">Home</a></li>
+            <li><a href="#donors">Find Donors</a></li>
+            <li><a href="#emergency">Emergency Feed</a></li>
+            <li><a href="#bloodBanks">Blood Banks</a></li>
+            <li><a href="#eligibility">Eligibility Check</a></li>
+          </ul>
+        </div>
+
+        <!-- Resources -->
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#">Donation Guidelines</a></li>
+            <li><a href="#">Blood Facts</a></li>
+            <li><a href="#">FAQs</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+          </ul>
+        </div>
+
+        <!-- Emergency Helplines -->
+        <div class="footer-col">
+          <h4>Emergency Helplines</h4>
+          <div class="footer-helpline">
+            <span class="icon">📞</span>
+            <div class="info">
+              <strong>999</strong>
+              National Emergency Service
+            </div>
+          </div>
+          <div class="footer-helpline">
+            <span class="icon">🏥</span>
+            <div class="info">
+              <strong>16263</strong>
+              Health Helpline (DGHS)
+            </div>
+          </div>
+          <div class="footer-helpline">
+            <span class="icon">🩸</span>
+            <div class="info">
+              <strong>09612-010101</strong>
+              Quantum Blood Helpline
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2026 BloodFinder Bangladesh. All rights reserved.</p>
+        <p class="disclaimer">
+          ⚠️ Disclaimer: BloodFinder is a voluntary platform. We are not a medical service provider. Always consult a medical professional. Donor data is shared with consent.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
