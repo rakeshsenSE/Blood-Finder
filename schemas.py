@@ -17,6 +17,8 @@ class DonorBase(BaseModel):
     upazila: str = ""
     last_donation_date: date | None = None
     phone: str = Field(min_length=6, max_length=30)
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class DonorCreate(DonorBase):
@@ -30,10 +32,26 @@ class DonorOut(DonorBase):
     verified: bool = False
 
 
+class DonorNearbyOut(DonorOut):
+    """DonorOut extended with computed distance field."""
+
+    distance_km: float = 0.0
+
+
+class PaginatedDonors(BaseModel):
+    """Paginated wrapper for donor list responses."""
+
+    donors: list[DonorOut]
+    total_pages: int
+    current_page: int
+    total_count: int
+
+
 # ---------- Blood request (SOS) ----------
 class BloodRequestBase(BaseModel):
     patient_name: str = Field(min_length=2, max_length=120)
     hospital_name: str = Field(min_length=2, max_length=160)
+    location: str | None = Field(default="", max_length=160)
     blood_group: BloodGroup
     bags_needed: int = Field(ge=1, le=20, default=1)
     urgency: Literal["Immediate", "Within 12 Hours", "Within 24 Hours"]

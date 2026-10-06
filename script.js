@@ -5,7 +5,7 @@
    =================================================================== */
 
 // ===== API BASE URL =====
-const API_BASE = "http://127.0.0.1:8000/api/v1";
+const API_BASE = "https://ckl15rq6-8000.asse.devtunnels.ms/api/v1";
 
 // ===== IN-MEMORY CACHE (populated from API) =====
 let ALL_DONORS = [];
@@ -23,8 +23,6 @@ const DISTRICTS_BY_DIVISION = {
   "Mymensingh": ["Mymensingh", "Jamalpur", "Netrokona", "Sherpur"],
 };
 
-// ===== CONSTANTS =====
-const DONATION_INTERVAL_DAYS = 120; // 4 months gap between donations
 
 // ===== DOM READY =====
 document.addEventListener("DOMContentLoaded", async () => {
@@ -36,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initEligibilityCalc();
   initModals();
   initHospitalSearch();     // wire up nearby hospital search
+  initHealthTipsScroll();   // wire up automated smooth scrolling health tips
   initScrollAnimations();
 
   // Load everything from the API in parallel
@@ -48,15 +47,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ===== API HELPERS =====
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || `HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    if (err.name === 'TypeError' && err.message && err.message.includes('fetch')) {
+      throw new Error('Server connection offline');
+    }
+    throw err;
   }
-  return res.json();
 }
 
 // ===== HEADER =====
@@ -173,28 +179,9 @@ function animateNumber(element, start, end, duration) {
   requestAnimationFrame(update);
 }
 
-// ===== POPULATE DIVISION DROPDOWNS =====
+// ===== POPULATE REGISTRATION DIVISION/DISTRICT DROPDOWN =====
 function populateDivisionDropdowns() {
-  const heroDiv = document.getElementById("searchDivision");
-  const heroDistrict = document.getElementById("searchDistrict");
   const regDiv = document.getElementById("regDistrict");
-
-  // Populate hero division (যদি select ট্যাগ হয়)
-  if (heroDiv && heroDiv.tagName === "SELECT") {
-    DIVISIONS.forEach(div => {
-      if (!Array.from(heroDiv.options).some(opt => opt.value === div)) {
-        heroDiv.add(new Option(div, div));
-      }
-    });
-
-    heroDiv.addEventListener("change", () => {
-      if (heroDistrict && heroDistrict.tagName === "SELECT") {
-        heroDistrict.innerHTML = '<option value="">All Districts</option>';
-        const districts = DISTRICTS_BY_DIVISION[heroDiv.value] || [];
-        districts.forEach(d => heroDistrict.add(new Option(d, d)));
-      }
-    });
-  }
 
   // Populate reg district/division
   if (regDiv && regDiv.tagName === "SELECT") {
@@ -234,64 +221,123 @@ function renderBanksSkeleton(container) {
   `).join('');
 }
 
-// ===== LOAD DONORS FROM API (with 0ms localStorage Caching) =====
-async function loadDonors(blood_group = "", division = "", district = "") {
-  blood_group = blood_group.trim();
-  division    = division.trim();
-  district    = district.trim();
+// ===== PAGINATION STATE =====
+let currentPage = 1;
+let currentFilters = { blood_group: "", district: "" };
+
+// ===== LOAD DONORS FROM API — Pagination-aware (Task 3 fix) =====
+async function loadDonors(blood_group = "", district = "", page = 1) {
+  blood_group = (blood_group || "").trim();
+  district    = (district || "").trim();
+
+  // Store filters for pagination navigation
+  currentFilters = { blood_group, district };
+  currentPage = page;
 
   const grid = document.getElementById("donorsGrid");
-  const isFilterActive = Boolean(blood_group || division || district);
+  if (!grid) return;
 
-  // 1. Instant cache rendering for zero filter latency
-  if (!isFilterActive) {
-    const cached = localStorage.getItem("bloodfinder_cache_donors");
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          ALL_DONORS = parsed;
-          renderDonors(parsed);
-          updateStatUI('count-donors', parsed.length);
-        }
-      } catch (e) {
-        console.warn("Cache parse error:", e);
-      }
-    }
-  }
+  const isFilterActive = Boolean(blood_group || district);
 
-  // Show shimmer skeletons if empty
-  if (!grid.children.length) {
+  // Show shimmer skeletons immediately
+  if (!grid.children.length || page === 1) {
     renderDonorsSkeleton(grid);
   }
 
   try {
     const params = new URLSearchParams();
     if (blood_group) params.append("blood_group", blood_group);
-    if (division)    params.append("division", division);
     if (district)    params.append("district", district);
+    params.append("page", page);
+    params.append("limit", 6);
 
-    const donors = await apiFetch(`/donors?${params.toString()}`);
+    const response = await apiFetch(`/donors?${params.toString()}`);
+    const donors      = (response && response.donors) ? response.donors : (Array.isArray(response) ? response : []);
+    const totalPages  = (response && response.total_pages) ? response.total_pages : 1;
+    const totalCount  = (response && response.total_count) ? response.total_count : 0;
+    const currentPg   = (response && response.current_page) ? response.current_page : 1;
+
     ALL_DONORS = donors;
 
-    if (!isFilterActive) {
-      localStorage.setItem("bloodfinder_cache_donors", JSON.stringify(donors));
-      updateStatUI('count-donors', donors.length);
+    if (!isFilterActive && page === 1) {
+      updateStatUI('count-donors', totalCount);
     }
 
     renderDonors(donors);
+    renderPagination(currentPg, totalPages);
   } catch (e) {
-    if (!ALL_DONORS.length) {
-      grid.innerHTML = `
-        <div class="empty-state-card">
-          <div class="icon">⚠️</div>
-          <h3>Could Not Load Donors</h3>
-          <p>${e.message}</p>
-          <button class="btn-reset-filters" onclick="resetFilters()">🔄 Retry Loading</button>
-        </div>`;
-    }
-    console.error("loadDonors error:", e);
+    console.error("Search API Error:", e);
+    const errorMsg = escapeHTML(e.message || 'Server connection offline');
+    showToast(`Search error: ${e.message || 'Server offline'}`, "error");
+    grid.innerHTML = `
+      <div class="empty-state-card">
+        <div class="icon">🔍</div>
+        <h3>No Donors Found</h3>
+        <p>Could not connect to donor backend (${errorMsg}). Please check server connection or reset filters.</p>
+        <button class="btn-reset-filters" onclick="resetFilters()">🔄 Reset Filters</button>
+      </div>`;
+    const paginationEl = document.getElementById("donorsPagination");
+    if (paginationEl) paginationEl.innerHTML = "";
   }
+}
+
+// ===== PAGINATION UI RENDERER (Task 3 fix) =====
+function renderPagination(currentPg, totalPages) {
+  // Find or create the pagination container
+  let paginationEl = document.getElementById("donorsPagination");
+  if (!paginationEl) {
+    paginationEl = document.createElement("div");
+    paginationEl.id = "donorsPagination";
+    paginationEl.className = "pagination-container";
+    const donorsSection = document.getElementById("donorsGrid");
+    if (donorsSection && donorsSection.parentNode) {
+      donorsSection.parentNode.insertBefore(paginationEl, donorsSection.nextSibling);
+    }
+  }
+
+  if (totalPages <= 1) {
+    paginationEl.innerHTML = "";
+    return;
+  }
+
+  let pagesHTML = "";
+
+  // Prev button
+  pagesHTML += `<button class="page-btn ${currentPg <= 1 ? 'disabled' : ''}" ${currentPg <= 1 ? 'disabled' : ''} onclick="goToPage(${currentPg - 1})">‹ Prev</button>`;
+
+  // Page number buttons (show at most 5 pages around current)
+  const startPage = Math.max(1, currentPg - 2);
+  const endPage   = Math.min(totalPages, currentPg + 2);
+
+  if (startPage > 1) {
+    pagesHTML += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+    if (startPage > 2) pagesHTML += `<span class="page-ellipsis">…</span>`;
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pagesHTML += `<button class="page-btn ${i === currentPg ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+  }
+
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) pagesHTML += `<span class="page-ellipsis">…</span>`;
+    pagesHTML += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+  }
+
+  // Next button
+  pagesHTML += `<button class="page-btn ${currentPg >= totalPages ? 'disabled' : ''}" ${currentPg >= totalPages ? 'disabled' : ''} onclick="goToPage(${currentPg + 1})">Next ›</button>`;
+
+  paginationEl.innerHTML = `
+    <div class="pagination-info">Page ${currentPg} of ${totalPages}</div>
+    <div class="pagination-btns">${pagesHTML}</div>
+  `;
+}
+
+function goToPage(page) {
+  const { blood_group, district } = currentFilters;
+  loadDonors(blood_group, district, page);
+  // Scroll back to donors section
+  const section = document.getElementById("donors");
+  if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ===== DEBOUNCE HELPER =====
@@ -303,45 +349,63 @@ function debounce(func, wait = 300) {
   };
 }
 
-// ===== DONOR SEARCH / FILTER (Live Debounced) =====
+// ===== DONOR SEARCH / FILTER (Live Debounced & Form Handled) =====
 function initDonorSearch() {
-  const searchBtn = document.getElementById("btnSearch");
-  if (searchBtn) searchBtn.addEventListener("click", filterDonors);
+  // Selector matching: btnSearch, searchBtn, .btn-search, searchForm
+  const searchBtn = document.getElementById("btnSearch") || document.getElementById("searchBtn") || document.querySelector(".btn-search");
+  const searchForm = document.getElementById("searchForm") || (searchBtn ? searchBtn.closest("form") : null);
 
-  const debouncedFilter = debounce(() => filterDonors(), 350);
+  if (searchBtn) {
+    searchBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      filterDonors(e);
+    });
+  }
 
-  ["searchBlood", "searchDivision", "searchDistrict"].forEach(id => {
+  if (searchForm) {
+    searchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      filterDonors(e);
+    });
+  }
+
+  const debouncedFilter = debounce((e) => filterDonors(e), 350);
+
+  ["searchBlood", "searchDistrict"].forEach(id => {
     const inputEl = document.getElementById(id);
     if (inputEl) {
       inputEl.addEventListener("input", debouncedFilter);
-      inputEl.addEventListener("change", filterDonors);
+      inputEl.addEventListener("change", (e) => {
+        e.preventDefault();
+        filterDonors(e);
+      });
     }
   });
 }
 
-function filterDonors() {
-  const blood    = (document.getElementById("searchBlood").value || '').trim();
-  const division = (document.getElementById("searchDivision").value || '').toLowerCase().trim();
-  const district = (document.getElementById("searchDistrict").value || '').toLowerCase().trim();
+function filterDonors(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const blood    = (document.getElementById("searchBlood")?.value || '').trim();
+  const district = (document.getElementById("searchDistrict")?.value || '').toLowerCase().trim();
 
-  loadDonors(blood, division, district);
+  // Reset to page 1 when filter changes
+  loadDonors(blood, district, 1);
 }
 
 // ===== RESET FILTERS ACTION =====
 function resetFilters() {
   const blood = document.getElementById("searchBlood");
-  const div   = document.getElementById("searchDivision");
   const dist  = document.getElementById("searchDistrict");
   if (blood) blood.value = "";
-  if (div)   div.value = "";
   if (dist)  dist.value = "";
-  loadDonors("", "", "");
+  loadDonors("", "", 1);
   showToast("Filters reset to show all donors.", "info");
 }
 
 // ===== RENDER DONOR CARDS =====
 function renderDonors(donors) {
   const grid = document.getElementById("donorsGrid");
+  if (!grid) return;
 
   if (!donors || donors.length === 0) {
     grid.innerHTML = `
@@ -357,7 +421,9 @@ function renderDonors(donors) {
   const currentUserEmail = getCurrentUserEmail();
   const isLoggedIn = Boolean(currentUserEmail);
 
-  grid.innerHTML = donors.map(donor => buildDonorCardHTML(donor, isLoggedIn)).join("");
+  const cardsHTML = donors.map(donor => buildDonorCardHTML(donor, isLoggedIn)).join("");
+
+  grid.innerHTML = cardsHTML;
   initScrollAnimations();
 }
 
@@ -377,25 +443,90 @@ function logContact(donorId) {
   }).catch(err => console.warn('Contact log failed:', err));
 }
 
+// ===== HTML ESCAPING HELPER (DOM XSS Protection) =====
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ===== ELIGIBILITY LOGIC =====
-function getEligibility(lastDonationDate) {
-  const lastDate = new Date(lastDonationDate);
+function getEligibility(lastDonationDateVal) {
+  // Guard: null, empty string, or invalid date → treat as first-time donor (always eligible)
+  if (!lastDonationDateVal) {
+    return { ready: true, remainingDays: 0, daysLeft: 0, daysSince: null, firstTime: true, nextEligibleDate: new Date() };
+  }
+
+  let year, month, day;
+  if (typeof lastDonationDateVal === 'string') {
+    const dateStr = lastDonationDateVal.trim().split('T')[0];
+    if (dateStr.includes('-')) {
+      [year, month, day] = dateStr.split('-').map(Number);
+    } else if (dateStr.includes('/')) {
+      [day, month, year] = dateStr.split('/').map(Number);
+    } else {
+      const d = new Date(lastDonationDateVal);
+      if (isNaN(d.getTime())) {
+        return { ready: true, remainingDays: 0, daysLeft: 0, daysSince: null, firstTime: true, nextEligibleDate: new Date() };
+      }
+      year = d.getFullYear();
+      month = d.getMonth() + 1;
+      day = d.getDate();
+    }
+  } else if (lastDonationDateVal instanceof Date) {
+    year = lastDonationDateVal.getFullYear();
+    month = lastDonationDateVal.getMonth() + 1;
+    day = lastDonationDateVal.getDate();
+  } else {
+    const d = new Date(lastDonationDateVal);
+    if (isNaN(d.getTime())) {
+      return { ready: true, remainingDays: 0, daysLeft: 0, daysSince: null, firstTime: true, nextEligibleDate: new Date() };
+    }
+    year = d.getFullYear();
+    month = d.getMonth() + 1;
+    day = d.getDate();
+  }
+
+  const lastDonationDate = new Date(year, month - 1, day);
+  lastDonationDate.setHours(0, 0, 0, 0);
+
   const today = new Date();
-  const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
-  const daysLeft = DONATION_INTERVAL_DAYS - diffDays;
+  today.setHours(0, 0, 0, 0);
+
+  // Calculate next eligible date: nextEligibleDate.setDate(nextEligibleDate.getDate() + 90);
+  const nextEligibleDate = new Date(lastDonationDate);
+  nextEligibleDate.setDate(nextEligibleDate.getDate() + 90);
+
+  const diffTime = nextEligibleDate - today;
+  const remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((today - lastDonationDate) / (1000 * 60 * 60 * 24));
+
+  // Guard: future last-donation date (user entered tomorrow or later)
+  const isFutureDate = lastDonationDate > today;
 
   return {
-    ready: daysLeft <= 0,
-    daysLeft: Math.max(0, daysLeft),
+    ready: !isFutureDate && today >= nextEligibleDate,
+    remainingDays: Math.max(0, remainingDays),
+    daysLeft: Math.max(0, remainingDays),
     daysSince: diffDays,
+    firstTime: false,
+    invalidFuture: isFutureDate,
+    lastDonationDate: lastDonationDate,
+    nextEligibleDate: nextEligibleDate
   };
 }
 
 // ===== ELIGIBILITY CALCULATOR =====
 function initEligibilityCalc() {
   const btn = document.getElementById("btnCalcEligibility");
-  const input = document.getElementById("calcLastDonation");
+  const input = document.getElementById("lastDonationDate");
   const result = document.getElementById("calcResult");
+
+  if (!btn || !input || !result) return;
 
   btn.addEventListener("click", () => {
     const dateVal = input.value;
@@ -404,28 +535,40 @@ function initEligibilityCalc() {
       return;
     }
 
-    const eligibility = getEligibility(dateVal);
+    const [year, month, day] = dateVal.split('-').map(Number);
+    const lastDonationDate = new Date(year, month - 1, day);
+    lastDonationDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const nextEligibleDate = new Date(lastDonationDate);
+    nextEligibleDate.setDate(nextEligibleDate.getDate() + 90);
+
     result.classList.add("show");
 
-    if (eligibility.ready) {
+    // Format dates for display in UK/European style (DD Month YYYY or DD/MM/YYYY)
+    const formattedDate = nextEligibleDate.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+
+    if (today >= nextEligibleDate) {
+      const pastDays = Math.floor((today - lastDonationDate) / (1000 * 60 * 60 * 24));
       result.className = "calc-result show ready";
       result.innerHTML = `
         <div class="result-icon">🎉</div>
         <div class="result-text">
-          <strong>You're eligible to donate!</strong><br>
-          It's been <strong>${eligibility.daysSince} days</strong> since your last donation. You can save a life today!
+          You are eligible to donate today! It's been ${pastDays} days since your last donation.
         </div>`;
     } else {
-      const nextDate = new Date(dateVal);
-      nextDate.setDate(nextDate.getDate() + DONATION_INTERVAL_DAYS);
-      const formatted = nextDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-
+      const remainingDays = Math.ceil((nextEligibleDate - today) / (1000 * 60 * 60 * 24));
       result.className = "calc-result show not-ready";
       result.innerHTML = `
         <div class="result-icon">⏰</div>
         <div class="result-text">
-          <strong>${eligibility.daysLeft} more days to go!</strong><br>
-          You'll be eligible again on <strong>${formatted}</strong>. Thank you for your generosity!
+          You will be eligible to donate in ${remainingDays} days. Next eligible date: ${formattedDate}.
         </div>`;
     }
   });
@@ -445,7 +588,8 @@ const BD_CITIES = [
 
 function initGeolocation() {
   const geoBtn = document.getElementById('btnGeoLocation');
-  const geoNearbyBtn = document.getElementById('btnGeoNearby');
+  // HTML uses id="btn-geo-nearby" (Task 4 fix: correct button ID)
+  const geoNearbyBtn = document.getElementById('btn-geo-nearby') || document.getElementById('btnGeoNearby');
 
   if (geoBtn) {
     geoBtn.addEventListener('click', () => detectUserLocation('hero'));
@@ -468,29 +612,22 @@ function detectUserLocation(source = 'hero') {
       const userLat = pos.coords.latitude;
       const userLng = pos.coords.longitude;
 
-      let closestCity = BD_CITIES[0];
-      let minDist = Infinity;
-
-      BD_CITIES.forEach(city => {
-        const dist = Math.hypot(city.lat - userLat, city.lng - userLng);
-        if (dist < minDist) {
-          minDist = dist;
-          closestCity = city;
-        }
-      });
-
       if (source === 'hero') {
-        const divInput = document.getElementById("searchDivision");
+        // Hero search: snap to closest city for text filters
+        let closestCity = BD_CITIES[0];
+        let minDist = Infinity;
+        BD_CITIES.forEach(city => {
+          const dist = Math.hypot(city.lat - userLat, city.lng - userLng);
+          if (dist < minDist) { minDist = dist; closestCity = city; }
+        });
         const distInput = document.getElementById("searchDistrict");
-        if (divInput) divInput.value = closestCity.division;
         if (distInput) distInput.value = closestCity.name;
-        filterDonors();
-        showToast(`📍 Location detected: ${closestCity.name}, ${closestCity.division}`, "success");
+        filterDonors(null);
+        showToast(`📍 Location detected: ${closestCity.name}`, "success");
       } else if (source === 'nearby') {
-        const hospInput = document.getElementById("hospital-search-input");
-        if (hospInput) hospInput.value = closestCity.name;
-        searchNearbyDonors();
-        showToast(`📍 Nearby location set to ${closestCity.name}`, "success");
+        // Nearby section: call the real Haversine /donors/nearby endpoint (Task 4 fix)
+        searchNearbyByGPS(userLat, userLng);
+        showToast(`📍 GPS coordinates acquired — searching nearby donors…`, "success");
       }
     },
     (err) => {
@@ -499,6 +636,49 @@ function detectUserLocation(source = 'hero') {
     },
     { timeout: 10000, enableHighAccuracy: true }
   );
+}
+
+// ===== GPS-BASED NEARBY SEARCH — calls /donors/nearby Haversine endpoint (Task 4) =====
+async function searchNearbyByGPS(lat, lon) {
+  const results    = document.getElementById('hospital-donors-results');
+  if (!results) return;
+  const radiusSel  = document.getElementById('search-radius');
+  const radiusVal  = radiusSel ? radiusSel.value : '5';
+  const radius     = radiusVal === 'all' ? 50 : parseFloat(radiusVal) || 5;
+
+  renderDonorsSkeleton(results);
+
+  try {
+    const params = new URLSearchParams({ lat, lon, radius });
+    const response = await apiFetch(`/donors/nearby?${params.toString()}`);
+    const donors = Array.isArray(response) ? response : (response?.donors || []);
+
+    if (!donors || donors.length === 0) {
+      results.innerHTML = `
+        <div class="empty-state-card">
+          <div class="icon">📍</div>
+          <h3>No Donors Found Nearby</h3>
+          <p>No donors found within ${radius} km of your current GPS location. Try increasing the radius.</p>
+        </div>`;
+      return;
+    }
+
+    const currentUserEmail = getCurrentUserEmail();
+    const isLoggedIn = Boolean(currentUserEmail);
+    results.innerHTML = `<div class="donors-grid">${donors.map(d => buildDonorCardHTML(d, isLoggedIn, d.distance_km)).join('')}</div>`;
+    initScrollAnimations();
+    showToast(`✅ Found ${donors.length} donor(s) within ${radius} km`, 'success');
+  } catch (e) {
+    console.error('searchNearbyByGPS error:', e);
+    const errorMsg = escapeHTML(e.message || 'Server offline');
+    results.innerHTML = `
+      <div class="empty-state-card">
+        <div class="icon">⚠️</div>
+        <h3>GPS Search Unavailable</h3>
+        <p>Unable to connect to location server (${errorMsg}). Please try searching by hospital name or area.</p>
+      </div>`;
+    showToast(`Unable to fetch nearby donors: ${e.message || 'Server connection offline'}`, "error");
+  }
 }
 
 // ===== QUICK ACTIONS & SHARE HELPERS =====
@@ -573,7 +753,10 @@ function initHospitalSearch() {
 async function searchNearbyDonors() {
   const input   = document.getElementById('hospital-search-input');
   const results = document.getElementById('hospital-donors-results');
-  const query   = (input.value || '').toLowerCase().trim();
+  if (!results) return;
+
+  const rawQuery = input ? input.value : '';
+  const query    = (rawQuery || '').toLowerCase().trim();
 
   if (!query) {
     results.innerHTML = `<div class="nearby-empty"><div class="icon">💡</div><h3>Enter a hospital or area name to search</h3></div>`;
@@ -583,49 +766,54 @@ async function searchNearbyDonors() {
   renderDonorsSkeleton(results);
 
   try {
-    const params = new URLSearchParams({ hospital_or_area: query });
-    const donors = await apiFetch(`/donors?${params.toString()}`);
+    const params = new URLSearchParams({ hospital_or_area: query, limit: 50 });
+    const response = await apiFetch(`/donors?${params.toString()}`);
+    const donors = (response && response.donors) ? response.donors : (Array.isArray(response) ? response : []);
 
-    const allMatched = ALL_DONORS.filter(d => {
-      const haystack = [d.district || '', d.upazila || '', d.division || ''].join(' ').toLowerCase();
-      return haystack.includes(query);
-    });
-
-    const idsSeen = new Set(donors.map(d => d.id));
-    const merged  = [...donors, ...allMatched.filter(d => !idsSeen.has(d.id))];
-
-    if (merged.length === 0) {
+    if (donors.length === 0) {
       results.innerHTML = `
         <div class="empty-state-card">
           <div class="icon">📍</div>
           <h3>No Donors Found Nearby</h3>
-          <p>No donors found within 1-5 km of this hospital or area. Try expanding your search location.</p>
+          <p>No donors found matching "${escapeHTML(query)}". Try a different area name or use the 📍 Near Me button for GPS search.</p>
         </div>`;
       return;
     }
 
     const currentUserEmail = getCurrentUserEmail();
     const isLoggedIn = Boolean(currentUserEmail);
-
-    results.innerHTML = `<div class="donors-grid">${merged.map(donor => buildDonorCardHTML(donor, isLoggedIn)).join('')}</div>`;
+    results.innerHTML = `<div class="donors-grid">${donors.map(d => buildDonorCardHTML(d, isLoggedIn)).join('')}</div>`;
     initScrollAnimations();
   } catch (e) {
-    results.innerHTML = `<div class="nearby-empty"><div class="icon">⚠️</div><h3>Search failed</h3><p>${e.message}</p></div>`;
     console.error('searchNearbyDonors error:', e);
+    const errorMsg = escapeHTML(e.message || 'Server offline');
+    results.innerHTML = `
+      <div class="empty-state-card">
+        <div class="icon">⚠️</div>
+        <h3>Search Currently Unavailable</h3>
+        <p>Could not connect to donor backend (${errorMsg}). Please check server connection and try again.</p>
+      </div>`;
+    showToast(`Search error: ${e.message || 'Server connection offline'}`, "error");
   }
 }
 
 // Shared helper: builds a single donor card HTML string (used by renderDonors + nearby search)
-function buildDonorCardHTML(donor, isLoggedIn) {
-  const blood = donor.blood_group || '';
+// distance_km is optional — shown on cards returned from /donors/nearby (Task 4)
+function buildDonorCardHTML(donor, isLoggedIn, distance_km = null) {
+  const nameEscaped = escapeHTML(donor.name || '');
+  const districtEscaped = escapeHTML(donor.district || '');
+  const upazilaEscaped = escapeHTML(donor.upazila || '');
+  const divisionEscaped = escapeHTML(donor.division || '');
+  const blood = escapeHTML(donor.blood_group || '');
   const lastDon = donor.last_donation_date || null;
-  const eligibility = lastDon ? getEligibility(lastDon) : { ready: false, daysLeft: 9999 };
-  const initials = donor.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+
+  const eligibility = getEligibility(lastDon);
+  const initials = escapeHTML((donor.name || 'D').split(' ').map(n => n[0]).join('').slice(0, 2));
   const formattedDate = lastDon
     ? new Date(lastDon).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    : 'N/A';
+    : 'First-time donor';
 
-  const phoneRaw = donor.phone.replace(/[^+\d]/g, '');
+  const phoneRaw = (donor.phone || '').replace(/[^+\d]/g, '');
   const waPhone  = phoneRaw.startsWith('+') ? phoneRaw.slice(1) : phoneRaw;
   const waText   = encodeURIComponent(`Looking for ${blood} blood donor: ${donor.name} — ${donor.phone}`);
 
@@ -640,24 +828,40 @@ function buildDonorCardHTML(donor, isLoggedIn) {
     copyBtn = `<button class="btn-copy-num" onclick="requireSignIn()">📋 Copy</button>`;
   }
 
-  const shareBtn = `<button class="btn-share" onclick="shareDonorCard('${donor.name.replace(/'/g, "\\'")}', '${blood}', '${donor.district.replace(/'/g, "\\'")}', '${phoneRaw}')">🔗 Share</button>`;
+  const shareBtn = `<button class="btn-share" onclick="shareDonorCard('${nameEscaped.replace(/'/g, "\\'")}', '${blood}', '${districtEscaped.replace(/'/g, "\\'")}', '${phoneRaw}')">🔗 Share</button>`;
+
+  const distanceBadge = (distance_km !== null && distance_km !== undefined)
+    ? `<div class="distance-badge">📍 ${distance_km} km away</div>`
+    : '';
+
+  let eligibilityText;
+  if (eligibility.firstTime) {
+    eligibilityText = '✅ Ready to Donate (First-time)';
+  } else if (eligibility.ready) {
+    eligibilityText = `✅ Ready to Donate (${eligibility.daysSince}d since last)`;
+  } else if (eligibility.invalidFuture) {
+    eligibilityText = '⏳ Pending Date Verification';
+  } else {
+    eligibilityText = `⏳ Eligible in ${eligibility.daysLeft} days`;
+  }
 
   return `
     <div class="donor-card animate-on-scroll">
       <div class="donor-card-header">
         <div class="donor-avatar">${initials}</div>
         <div class="donor-info">
-          <h3>${donor.name} ${donor.verified ? '<span class="verified-badge">✓ Verified</span>' : ''}</h3>
-          <p>📍 ${donor.upazila ? donor.upazila + ', ' : ''}${donor.district}</p>
+          <h3>${nameEscaped} ${donor.verified ? '<span class="verified-badge">✓ Verified</span>' : ''}</h3>
+          <p>📍 ${upazilaEscaped ? upazilaEscaped + ', ' : ''}${districtEscaped}</p>
         </div>
         <div class="blood-badge">${blood}</div>
       </div>
+      ${distanceBadge}
       <div class="donor-details">
-        <div class="detail-item"><span class="icon">🏥</span> ${donor.division} Division</div>
+        <div class="detail-item"><span class="icon">🏥</span> ${divisionEscaped} Division</div>
         <div class="detail-item"><span class="icon">📅</span> Last: ${formattedDate}</div>
       </div>
-      <div class="eligibility-status ${eligibility.ready ? 'ready' : 'not-ready'}">
-        ${eligibility.ready ? '✅ Ready to Donate' : `⏳ Eligible in ${eligibility.daysLeft} days`}
+      <div class="eligibility-status ${(eligibility.ready || eligibility.firstTime) ? 'ready' : 'not-ready'}">
+        ${eligibilityText}
       </div>
       <div class="donor-actions">
         ${callBtn}
@@ -706,8 +910,11 @@ async function loadBloodBanks() {
   }
 }
 
+let isBanksExpanded = false;
+
 function renderBloodBanks(banks) {
   const grid = document.getElementById("banksGrid");
+  if (!grid) return;
 
   if (!banks || banks.length === 0) {
     grid.innerHTML = `
@@ -716,37 +923,89 @@ function renderBloodBanks(banks) {
         <h3>No Blood Banks Directory Found</h3>
         <p>Currently no blood banks are registered in this view.</p>
       </div>`;
+    const oldWrapper = document.getElementById("banksToggleWrapper");
+    if (oldWrapper) oldWrapper.remove();
     return;
   }
 
-  grid.innerHTML = banks.map((bank, i) => {
-    const cleanPhone = bank.phone.replace(/[^+\d]/g, '');
+  const cardsHTML = banks.map((bank, i) => {
+    const cleanPhone = (bank.phone || '').replace(/[^+\d]/g, '');
+    const isHidden = (i >= 4 && !isBanksExpanded) ? "bank-card-hidden" : "";
+    const bankName = escapeHTML(bank.name || 'Blood Bank');
+    const bankLoc = escapeHTML(bank.location || '');
+    const bankCity = escapeHTML((bank.location || '').split(",").pop().trim());
+    const bankHours = escapeHTML(bank.operating_hours || bank.hours || '');
+    const bankServices = escapeHTML(bank.services || '');
+
     return `
-      <div class="bank-card animate-on-scroll" data-bank="${i}">
+      <div class="bank-card animate-on-scroll ${isHidden}" data-bank="${i}">
         <div class="bank-card-header" onclick="toggleBank(event, ${i})" aria-expanded="false" role="button" tabindex="0">
           <div class="bank-info">
             <div class="bank-icon">🏛️</div>
             <div>
-              <h3>${bank.name}</h3>
-              <p>${bank.location.split(",").pop().trim()}</p>
+              <h3>${bankName}</h3>
+              <p>${bankCity}</p>
             </div>
           </div>
           <div class="bank-toggle">▼</div>
         </div>
         <div class="bank-card-body">
           <div class="bank-card-content">
-            <div class="bank-detail"><span class="icon">📍</span> ${bank.location}</div>
-            <div class="bank-detail"><span class="icon">🕐</span> ${bank.operating_hours || bank.hours || ""}</div>
-            <div class="bank-detail"><span class="icon">🩺</span> ${bank.services}</div>
+            <div class="bank-detail"><span class="icon">📍</span> ${bankLoc}</div>
+            <div class="bank-detail"><span class="icon">🕐</span> ${bankHours}</div>
+            <div class="bank-detail"><span class="icon">🩺</span> ${bankServices}</div>
             <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-              <a href="tel:${cleanPhone}" class="btn-bank-call" style="flex: 1;">📞 Call ${bank.phone}</a>
+              <a href="tel:${cleanPhone}" class="btn-bank-call" style="flex: 1;">📞 Call ${cleanPhone}</a>
               <button class="btn-copy-num" style="flex: 1;" onclick="copyPhoneNumber('${cleanPhone}', null)">📋 Copy</button>
-              <button class="btn-share" style="width: 100%; margin-top: 4px;" onclick="shareBankCard('${bank.name.replace(/'/g, "\\'")}', '${bank.location.replace(/'/g, "\\'")}', '${cleanPhone}')">🔗 Share Bank</button>
+              <button class="btn-share" style="width: 100%; margin-top: 4px;" onclick="shareBankCard('${bankName.replace(/'/g, "\\'")}', '${bankLoc.replace(/'/g, "\\'")}', '${cleanPhone}')">🔗 Share Bank</button>
             </div>
           </div>
         </div>
       </div>`;
   }).join("");
+
+  grid.innerHTML = cardsHTML;
+
+  // Setup / update toggle button if there are > 4 blood banks
+  let wrapper = document.getElementById("banksToggleWrapper");
+  if (banks.length > 4) {
+    if (!wrapper) {
+      wrapper = document.createElement("div");
+      wrapper.id = "banksToggleWrapper";
+      wrapper.className = "banks-toggle-wrapper";
+      if (grid.parentNode) {
+        grid.parentNode.insertBefore(wrapper, grid.nextSibling);
+      }
+    }
+    wrapper.innerHTML = `
+      <button class="btn-toggle-banks" id="btnToggleBanks" aria-label="Toggle blood banks view">
+        ${isBanksExpanded ? 'Show Less <span class="arrow">▲</span>' : 'Show All Blood Banks <span class="arrow">▼</span>'}
+      </button>
+    `;
+    const toggleBtn = document.getElementById("btnToggleBanks");
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        isBanksExpanded = !isBanksExpanded;
+        const allBankCards = grid.querySelectorAll(".bank-card");
+        if (isBanksExpanded) {
+          allBankCards.forEach(card => card.classList.remove("bank-card-hidden"));
+          toggleBtn.innerHTML = 'Show Less <span class="arrow">▲</span>';
+          initScrollAnimations();
+        } else {
+          allBankCards.forEach((card, idx) => {
+            if (idx >= 4) card.classList.add("bank-card-hidden");
+          });
+          toggleBtn.innerHTML = 'Show All Blood Banks <span class="arrow">▼</span>';
+          const bloodBanksSection = document.getElementById("bloodBanks");
+          if (bloodBanksSection) {
+            bloodBanksSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
+    }
+  } else if (wrapper) {
+    wrapper.remove();
+  }
 
   initScrollAnimations();
 }
@@ -787,15 +1046,6 @@ function initModals() {
   regOpenBtns.forEach(btn => btn.addEventListener("click", () => openModal(regOverlay)));
   regClose.addEventListener("click", () => closeModal(regOverlay));
   regOverlay.addEventListener("click", (e) => { if (e.target === regOverlay) closeModal(regOverlay); });
-
-  // Request Blood modal
-  const reqOverlay = document.getElementById("requestModal");
-  const reqOpenBtns = document.querySelectorAll("[data-open-request]");
-  const reqClose = document.getElementById("closeRequest");
-
-  reqOpenBtns.forEach(btn => btn.addEventListener("click", () => openModal(reqOverlay)));
-  reqClose.addEventListener("click", () => closeModal(reqOverlay));
-  reqOverlay.addEventListener("click", (e) => { if (e.target === reqOverlay) closeModal(reqOverlay); });
 
   // ===== Sign-In Modal (Emergency Speed Access) =====
   const signinOverlay = document.getElementById("signin-modal");
@@ -977,13 +1227,11 @@ function initModals() {
 
   // Form submissions wired to API
   document.getElementById("registerForm").addEventListener("submit", handleRegister);
-  document.getElementById("requestForm").addEventListener("submit", handleRequest);
 
   // ESC to close all modals
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeModal(regOverlay);
-      closeModal(reqOverlay);
       closeModal(signinOverlay);
     }
   });
@@ -1000,6 +1248,7 @@ function openModal(overlay) {
 }
 
 function closeModal(overlay) {
+  if (!overlay) return;
   overlay.classList.remove("active");
   document.body.style.overflow = "";
 }
@@ -1046,42 +1295,6 @@ async function handleRegister(e) {
   }
 }
 
-// ===== SOS REQUEST — POST to /api/v1/sos-requests =====
-async function handleRequest(e) {
-  e.preventDefault();
-  const form = e.target;
-
-  const submitBtn = form.querySelector("button[type='submit']");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Submitting…";
-
-  const payload = {
-    patient_name: form.querySelector("#reqPatient").value.trim(),
-    blood_group: form.querySelector("#reqBlood").value,
-    bags_needed: parseInt(form.querySelector("#reqBags").value, 10),
-    hospital_name: form.querySelector("#reqHospital").value.trim(),
-    urgency: form.querySelector("#reqUrgency").value,
-    contact_number: form.querySelector("#reqContact").value.trim(),
-    notes: form.querySelector("#reqNote").value.trim() || null,
-  };
-
-  try {
-    await apiFetch("/sos-requests", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    showToast("🚨 Blood request submitted! Donors will be notified immediately.", "success");
-    form.reset();
-    closeModal(document.getElementById("requestModal"));
-    // Refresh SOS feed
-    loadSOSRequests();
-  } catch (err) {
-    showToast(`❌ Request failed: ${err.message}`, "error");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Submit Urgent Request";
-  }
-}
 
 // ===== SHARE FUNCTIONS =====
 function shareWhatsApp(text) {
@@ -1129,4 +1342,143 @@ function initScrollAnimations() {
 
   elements.forEach(el => observer.observe(el));
 }
+
+// ===== HEALTH & BLOOD DONATION TIPS CENTER-ZOOM CAROUSEL =====
+function initHealthTipsScroll() {
+  const container = document.getElementById("healthTipsContainer");
+  const track = document.getElementById("healthTipsTrack");
+  if (!container || !track) return;
+
+  // Duplicate cards twice (3 sets total) for seamless infinite looping without blank gaps
+  const originalHTML = track.innerHTML;
+  track.innerHTML = originalHTML + originalHTML + originalHTML;
+
+  const cards = track.querySelectorAll(".health-card");
+  const numCards = cards.length;
+  const originalCount = numCards / 3;
+
+  let isPaused = false;
+  let isMouseDown = false;
+  let startX = 0;
+  let scrollLeftStart = 0;
+  const speed = 0.8; // scroll speed in pixels per frame
+
+  // Loop distance for 1 set of original cards
+  function getLoopDistance() {
+    if (cards.length >= originalCount * 2 && cards[originalCount]) {
+      return cards[originalCount].offsetLeft - cards[0].offsetLeft;
+    }
+    return track.scrollWidth / 3;
+  }
+
+  // Calculate center active card
+  function updateCenterActiveCard() {
+    const containerRect = container.getBoundingClientRect();
+    const containerCenter = containerRect.left + containerRect.width / 2;
+
+    let minDistance = Infinity;
+    let activeCard = null;
+
+    cards.forEach(card => {
+      const cardRect = card.getBoundingClientRect();
+      const cardCenter = cardRect.left + cardRect.width / 2;
+      const distance = Math.abs(containerCenter - cardCenter);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        activeCard = card;
+      }
+    });
+
+    cards.forEach(card => {
+      if (card === activeCard) {
+        card.classList.add("active-center");
+      } else {
+        card.classList.remove("active-center");
+      }
+    });
+  }
+
+  // Initialize scroll position to set 2 (middle set) so left and right sides are fully populated
+  function initScrollPosition() {
+    const loopDist = getLoopDistance();
+    if (cards[originalCount]) {
+      const cardCenterOffset = cards[originalCount].offsetLeft - (container.clientWidth / 2 - cards[originalCount].offsetWidth / 2);
+      container.scrollLeft = cardCenterOffset;
+    } else {
+      container.scrollLeft = loopDist;
+    }
+    updateCenterActiveCard();
+  }
+
+  function step() {
+    if (!isPaused && !isMouseDown) {
+      container.scrollLeft += speed;
+      const loopDist = getLoopDistance();
+      // Seamless wrap when reaching end of middle set
+      if (container.scrollLeft >= loopDist * 2) {
+        container.scrollLeft -= loopDist;
+      }
+    }
+    updateCenterActiveCard();
+    requestAnimationFrame(step);
+  }
+
+  // Handle loop reset on manual scroll
+  container.addEventListener("scroll", () => {
+    const loopDist = getLoopDistance();
+    if (container.scrollLeft >= loopDist * 2) {
+      container.scrollLeft -= loopDist;
+    } else if (container.scrollLeft <= loopDist * 0.2) {
+      container.scrollLeft += loopDist;
+    }
+    updateCenterActiveCard();
+  });
+
+  // Dynamic Pause on Mouse Hover / Enter
+  container.addEventListener("mouseenter", () => { isPaused = true; });
+  container.addEventListener("mouseleave", () => {
+    isPaused = false;
+    isMouseDown = false;
+  });
+
+  // Dynamic Pause on Touch Events (Mobile)
+  container.addEventListener("touchstart", () => { isPaused = true; }, { passive: true });
+  container.addEventListener("touchend", () => { isPaused = false; });
+  container.addEventListener("touchcancel", () => { isPaused = false; });
+
+  // Mouse Drag / Manual Swipe
+  container.addEventListener("mousedown", (e) => {
+    isMouseDown = true;
+    isPaused = true;
+    startX = e.pageX - container.offsetLeft;
+    scrollLeftStart = container.scrollLeft;
+  });
+
+  container.addEventListener("mouseup", () => {
+    isMouseDown = false;
+    isPaused = false;
+  });
+
+  container.addEventListener("mousemove", (e) => {
+    if (!isMouseDown) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    container.scrollLeft = scrollLeftStart - walk;
+    updateCenterActiveCard();
+  });
+
+  // Recalculate layout on window resize
+  window.addEventListener("resize", () => {
+    updateCenterActiveCard();
+  });
+
+  // Set initial scroll position and start animation
+  setTimeout(initScrollPosition, 50);
+  requestAnimationFrame(step);
+}
+
+
+
 

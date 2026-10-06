@@ -1,8 +1,9 @@
 """Database access helpers (CRUD)."""
 
+import math
 from datetime import datetime, timezone
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import Session
 
 import models
@@ -35,6 +36,18 @@ def increment_stats(db: Session, payload: schemas.StatsIncrement) -> models.Stat
     return stats
 
 
+def get_active_requests_count(db: Session) -> dict[str, int]:
+    """Return count of total active blood requests."""
+    stmt = select(func.count()).select_from(models.BloodRequest)
+    if hasattr(models.BloodRequest, "status"):
+        stmt = stmt.where(models.BloodRequest.status == "active")
+    elif hasattr(models.BloodRequest, "is_fulfilled"):
+        stmt = stmt.where(models.BloodRequest.is_fulfilled == False)
+    count = db.scalar(stmt) or 0
+    return {"active_requests_count": count}
+
+
+
 # ---------- Donors ----------
 def list_donors(
     db: Session,
@@ -42,8 +55,10 @@ def list_donors(
     division: str | None = None,
     district: str | None = None,
     hospital_or_area: str | None = None,
-    limit: int = 100,
-) -> list[models.Donor]:
+    page: int = 1,
+    limit: int = 6,
+) -> dict:
+    """Return a page of donors plus pagination metadata."""
     stmt = select(models.Donor)
     if blood_group:
         stmt = stmt.where(models.Donor.blood_group == blood_group)
@@ -51,15 +66,39 @@ def list_donors(
         term = f"%{division.strip()}%"
         stmt = stmt.where(models.Donor.division.ilike(term))
     if district:
+        # TASK 2 FIX: match district OR upazila with case-insensitive search
         term = f"%{district.strip()}%"
-        stmt = stmt.where(models.Donor.district.ilike(term))
+        stmt = stmt.where(
+            or_(
+                models.Donor.district.ilike(term),
+                models.Donor.upazila.ilike(term),
+            )
+        )
     if hospital_or_area:
         term = f"%{hospital_or_area.strip()}%"
         stmt = stmt.where(
-            models.Donor.district.ilike(term) | models.Donor.upazila.ilike(term)
+            or_(
+                models.Donor.district.ilike(term),
+                models.Donor.upazila.ilike(term),
+            )
         )
-    stmt = stmt.order_by(models.Donor.id).limit(limit)
-    return list(db.scalars(stmt))
+    stmt = stmt.order_by(models.Donor.id)
+
+    # Total count for pagination metadata
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total_count = db.scalar(count_stmt) or 0
+    total_pages = max(1, math.ceil(total_count / limit))
+    current_page = max(1, min(page, total_pages))
+
+    offset = (current_page - 1) * limit
+    donors = list(db.scalars(stmt.offset(offset).limit(limit)))
+
+    return {
+        "donors": donors,
+        "total_pages": total_pages,
+        "current_page": current_page,
+        "total_count": total_count,
+    }
 
 
 def create_donor(db: Session, payload: schemas.DonorCreate) -> models.Donor:
@@ -69,6 +108,43 @@ def create_donor(db: Session, payload: schemas.DonorCreate) -> models.Donor:
     db.commit()
     db.refresh(donor)
     return donor
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Return great-circle distance in km between two (lat, lon) points."""
+    R = 6371.0  # Earth radius in km
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lam = math.radians(lon2 - lon1)
+    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lam / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def get_nearby_donors(
+    db: Session,
+    lat: float,
+    lon: float,
+    radius_km: float = 5.0,
+) -> list[dict]:
+    """Return donors within `radius_km` km, sorted closest-first, with distance_km field."""
+    # Fetch all donors that have coordinates to avoid full-table Python loop on huge sets
+    stmt = select(models.Donor).where(
+        models.Donor.latitude.isnot(None),
+        models.Donor.longitude.isnot(None),
+    )
+    all_donors = list(db.scalars(stmt))
+
+    nearby = []
+    for donor in all_donors:
+        dist = _haversine_km(lat, lon, donor.latitude, donor.longitude)  # type: ignore[arg-type]
+        if dist <= radius_km:
+            nearby.append((donor, round(dist, 1)))
+
+    nearby.sort(key=lambda x: x[1])  # sort by distance ascending
+    return [
+        {**schemas.DonorOut.model_validate(donor).model_dump(), "distance_km": dist_km}
+        for donor, dist_km in nearby
+    ]
 
 
 # ---------- SOS requests ----------

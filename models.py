@@ -2,7 +2,7 @@
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -20,6 +20,8 @@ class Donor(Base):
     last_donation_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     phone: Mapped[str] = mapped_column(String(30), nullable=False)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class BloodRequest(Base):
@@ -30,6 +32,7 @@ class BloodRequest(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     patient_name: Mapped[str] = mapped_column(String(120), nullable=False)
     hospital_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    location: Mapped[str | None] = mapped_column(String(160), nullable=True, default="")
     blood_group: Mapped[str] = mapped_column(String(3), index=True, nullable=False)
     bags_needed: Mapped[int] = mapped_column(Integer, default=1)
     urgency: Mapped[str] = mapped_column(String(40), default="Immediate")

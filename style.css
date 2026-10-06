@@ -46,9 +46,18 @@
   box-sizing: border-box;
 }
 
+html, body, .container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  /* Match the dark footer so no light gap bleeds at the bottom of the page */
+  background-color: var(--slate-900);
 }
 
 body {
@@ -58,7 +67,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 a {
@@ -76,7 +86,8 @@ input, select, textarea { font-family: inherit; }
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .section-badge {
@@ -303,8 +314,10 @@ input, select, textarea { font-family: inherit; }
 .signin-divider {
   display: flex;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  margin: 20px 0;
+  margin: 16px auto;
+  width: 100%;
   color: var(--slate-400);
   font-size: 0.78rem;
   font-weight: 700;
@@ -322,8 +335,23 @@ input, select, textarea { font-family: inherit; }
   padding: 0 14px;
 }
 
+#g_id_signin_container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto 12px;
+}
+
+#g_id_signin_container > iframe,
+#g_id_signin_container > div {
+  margin: 0 auto !important;
+}
+
 .btn-google-signin {
   width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
   padding: 12px 18px;
   background: var(--white);
   border: 1.5px solid var(--slate-200);
@@ -475,7 +503,7 @@ input, select, textarea { font-family: inherit; }
 
 /* Hero Search Box */
 .hero-search {
-  max-width: 780px;
+  max-width: 720px;
   margin: 0 auto;
   background: var(--white);
   border-radius: var(--radius-xl);
@@ -487,7 +515,7 @@ input, select, textarea { font-family: inherit; }
 
 .search-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto auto;
+  grid-template-columns: 1fr 1fr auto auto;
   gap: 6px;
   align-items: center;
 }
@@ -602,17 +630,17 @@ input, select, textarea { font-family: inherit; }
 
 /* ===== STATS COUNTER ===== */
 .stats {
-  padding: 0 0 80px;
-  margin-top: -30px;
+  padding: 40px 0 80px;  /* top padding gives breathing room below the search bar */
+  margin-top: 0;         /* removed negative margin that caused overlap with hero */
+  margin-bottom: 0;
   position: relative;
   z-index: 2;
 }
 
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  max-width: 540px;
+  display: flex;
+  justify-content: center;
+  max-width: 280px;
   margin: 0 auto;
 }
 
@@ -731,6 +759,19 @@ input, select, textarea { font-family: inherit; }
   background: var(--white);
 }
 
+.donors-container,
+.donors .container,
+.donors-grid,
+.hero-search,
+.hospital-results-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 16px;
+  margin: 0 auto;
+}
+
 .donors-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -747,6 +788,11 @@ input, select, textarea { font-family: inherit; }
   position: relative;
   overflow: hidden;
   align-self: start;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 16px 0;
+  display: block;
 }
 
 .donor-card:hover {
@@ -1239,23 +1285,38 @@ input, select, textarea { font-family: inherit; }
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.nearby-btn-wrapper {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 16px;
+  margin: 16px 0;
+}
+
 .btn-nearby-search {
-  flex: 0 0 auto;
+  max-width: 100%;
+  width: auto;
+  white-space: normal;
+  box-sizing: border-box;
+  margin: 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, var(--blue-500), #2563EB);
   color: white;
   border: none;
-  padding: 0 28px;
-  height: 50px;
+  padding: 12px 28px;
+  min-height: 50px;
   border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 700;
-  display: flex;
-  align-items: center;
   gap: 8px;
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
   transition: var(--transition-base);
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .btn-nearby-search:hover {
@@ -1444,6 +1505,41 @@ input, select, textarea { font-family: inherit; }
   color: white;
 }
 
+/* ===== BLOOD BANK LOAD MORE / COLLAPSE TOGGLE ===== */
+.bank-card.bank-card-hidden {
+  display: none !important;
+}
+
+.banks-toggle-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 28px;
+}
+
+.btn-toggle-banks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--red-primary), var(--red-dark));
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-red);
+  transition: var(--transition-base);
+}
+
+.btn-toggle-banks:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(230, 57, 70, 0.4);
+}
+
 /* ===== MODALS ===== */
 .modal-overlay {
   position: fixed;
@@ -1611,6 +1707,7 @@ input, select, textarea { font-family: inherit; }
   background: var(--slate-900);
   color: var(--slate-400);
   padding: 60px 0 0;
+  margin-bottom: 0;  /* prevent any bottom gap below the dark footer */
 }
 
 .footer-grid {
@@ -1941,3 +2038,458 @@ input, select, textarea { font-family: inherit; }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--slate-400);
 }
+
+/* ===== PAGINATION (Task 3) ===== */
+.pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0 8px;
+}
+
+.pagination-info {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--slate-400);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pagination-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-btn {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--slate-200);
+  background: var(--white);
+  color: var(--slate-600);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.page-btn:hover:not(.disabled):not(.active) {
+  border-color: var(--red-primary);
+  color: var(--red-primary);
+  background: var(--red-light);
+  transform: translateY(-1px);
+}
+
+.page-btn.active {
+  background: linear-gradient(135deg, var(--red-primary), var(--red-dark));
+  border-color: transparent;
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(230, 57, 70, 0.35);
+  transform: translateY(-1px);
+}
+
+.page-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  color: var(--slate-400);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ===== DISTANCE BADGE (Task 4 — GPS nearby results) ===== */
+.distance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: var(--blue-500);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid #bfdbfe;
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* ===== RESPONSIVE — pagination & badges ===== */
+@media (max-width: 600px) {
+  .page-btn {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.82rem;
+    padding: 0 8px;
+  }
+  .pagination-btns {
+    gap: 4px;
+  }
+}
+
+
+
+/* ===== MOBILE RESPONSIVENESS (max-width: 768px) ===== */
+@media (max-width: 768px) {
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .container,
+  .donors-container,
+  .donors .container,
+  .donors-grid,
+  .hero-search,
+  .hospital-results-container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 16px;
+    margin: 0 auto;
+  }
+
+  /* Responsive Search Forms */
+  .hero-search,
+  .nearby-search-card {
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  /* Enforce strict mobile sizing for form inputs (exclude date picker to avoid clipping native UI) */
+  input[type="text"], input[type="tel"], input[type="number"], select {
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    box-sizing: border-box !important;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .search-grid,
+  .nearby-search-form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    box-sizing: border-box;
+  }
+
+  .nearby-input-group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    box-sizing: border-box !important;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .nearby-input-group .nearby-input {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    margin-bottom: 0 !important;
+    border: none !important;
+    padding: 0 14px 0 0 !important;
+  }
+
+  .search-field,
+  .search-field input,
+  .search-field select,
+  .btn-location,
+  .btn-search,
+  .nearby-radius-select,
+  .btn-geo-nearby,
+  .btn-nearby-search {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btn-location, .btn-search {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  /* Responsive Health Cards on Mobile */
+  .health-card {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Responsive Donor Cards on Mobile */
+  .donor-card,
+  .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    margin: 16px 0;
+    display: block;
+    position: static;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .donors-grid {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* Inner Flex / Grid Containers inside Donor Cards */
+  .donor-card-header,
+  .donor-details,
+  .donor-actions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    box-sizing: border-box;
+  }
+
+  .donor-card-header {
+    align-items: flex-start;
+  }
+
+  .blood-badge {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+
+  /* Action Buttons (Call, WhatsApp, Copy, Share) */
+  .btn-call,
+  .btn-whatsapp,
+  .btn-copy-num,
+  .btn-share {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    box-sizing: border-box !important;
+    margin: 0;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Compact Blood Bank Cards on Mobile */
+  .banks-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .bank-card-header {
+    padding: 14px 16px;
+  }
+
+  .bank-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .bank-info h3 {
+    font-size: 0.88rem;
+  }
+
+  .bank-info p {
+    font-size: 0.75rem;
+  }
+
+  .bank-card-content {
+    padding: 0 16px 14px;
+    gap: 8px;
+  }
+
+  .bank-detail {
+    font-size: 0.8rem;
+  }
+
+  .btn-bank-call {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ===== DATE INPUT STYLING ===== */
+.date-input {
+  padding: 12px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  font-size: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.date-input:focus {
+  border-color: var(--red-primary);
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: opacity(0.6);
+}
+
+/* ===== EMERGENCY BLOOD REQUESTS SECTION ===== */
+.sos-requests-section {
+  padding: 80px 0;
+  background: var(--slate-50);
+  border-top: 1px solid var(--slate-200);
+}
+
+.sos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.sos-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--slate-200);
+  border-left: 5px solid var(--red-primary);
+  padding: 24px;
+  transition: var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sos-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-left-color: var(--red-dark);
+}
+
+.sos-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sos-patient-info h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin-bottom: 6px;
+}
+
+.sos-urgency-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.urgent-immediate {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.urgent-12h {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fcd34d;
+}
+
+.urgent-24h {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.sos-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--slate-600);
+}
+
+.sos-details .detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sos-details .detail-item.notes {
+  font-style: italic;
+  color: var(--slate-500);
+  background: var(--slate-100);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+}
+
+.btn-sos-call {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, var(--red-primary), var(--red-dark));
+  color: var(--white);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-red);
+  transition: var(--transition-base);
+  text-decoration: none;
+}
+
+.btn-sos-call:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(230, 57, 70, 0.4);
+  color: var(--white);
+}
+
+
+
+
+
+
+
+
+

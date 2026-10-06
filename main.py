@@ -63,20 +63,36 @@ def bump_stats(
 
 
 # ---------- Donors ----------
-@app.get(f"{API}/donors", response_model=list[schemas.DonorOut], tags=["donors"])
+@app.get(f"{API}/donors/nearby", response_model=list[schemas.DonorNearbyOut], tags=["donors"])
+def read_nearby_donors(
+    lat: float = Query(..., description="User latitude"),
+    lon: float = Query(..., description="User longitude"),
+    radius: float = Query(default=5.0, ge=0.1, le=100.0, description="Search radius in km"),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Return donors within `radius` km of the given coordinates, sorted closest-first."""
+    return crud.get_nearby_donors(db, lat=lat, lon=lon, radius_km=radius)
+
+
+@app.get(f"{API}/donors", response_model=schemas.PaginatedDonors, tags=["donors"])
+@app.get("/api/donors", response_model=schemas.PaginatedDonors, tags=["donors"])
 def read_donors(
     blood_group: str | None = Query(default=None),
     division: str | None = Query(default=None),
     district: str | None = Query(default=None),
     hospital_or_area: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    limit: int = Query(default=6, ge=1, le=50, description="Donors per page"),
     db: Session = Depends(get_db),
-) -> list[models.Donor]:
+) -> dict:
     return crud.list_donors(
         db,
         blood_group or None,
         division or None,
         district or None,
         hospital_or_area or None,
+        page=page,
+        limit=limit,
     )
 
 
@@ -89,22 +105,25 @@ def register_donor(
     return crud.create_donor(db, payload)
 
 
-# ---------- SOS requests ----------
-@app.get(
-    f"{API}/sos-requests",
-    response_model=list[schemas.BloodRequestOut],
-    tags=["sos-requests"],
-)
+# ---------- SOS / Emergency requests ----------
+@app.get(f"{API}/requests/active-count", tags=["sos-requests"])
+@app.get("/api/requests/active-count", tags=["sos-requests"])
+def read_active_requests_count(db: Session = Depends(get_db)) -> dict[str, int]:
+    return crud.get_active_requests_count(db)
+
+
+@app.get(f"{API}/sos-requests", response_model=list[schemas.BloodRequestOut], tags=["sos-requests"])
+@app.get(f"{API}/requests", response_model=list[schemas.BloodRequestOut], tags=["sos-requests"])
+@app.get(f"{API}/emergency-requests", response_model=list[schemas.BloodRequestOut], tags=["sos-requests"])
+@app.get("/api/sos-requests", response_model=list[schemas.BloodRequestOut], tags=["sos-requests"])
 def read_requests(db: Session = Depends(get_db)) -> list[schemas.BloodRequestOut]:
     return crud.list_requests(db)
 
 
-@app.post(
-    f"{API}/sos-requests",
-    response_model=schemas.BloodRequestOut,
-    status_code=201,
-    tags=["sos-requests"],
-)
+@app.post(f"{API}/sos-requests", response_model=schemas.BloodRequestOut, status_code=201, tags=["sos-requests"])
+@app.post(f"{API}/requests", response_model=schemas.BloodRequestOut, status_code=201, tags=["sos-requests"])
+@app.post(f"{API}/emergency-requests", response_model=schemas.BloodRequestOut, status_code=201, tags=["sos-requests"])
+@app.post("/api/sos-requests", response_model=schemas.BloodRequestOut, status_code=201, tags=["sos-requests"])
 def create_request(
     payload: schemas.BloodRequestCreate, db: Session = Depends(get_db)
 ) -> schemas.BloodRequestOut:

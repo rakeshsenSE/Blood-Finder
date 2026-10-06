@@ -5,7 +5,14 @@ from collections.abc import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres.southeyghwvyegjchfkc:R%40kesh%20sen123@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres"
+import os
+
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres.southeyghwvyegjchfkc:R%40kesh%20sen123@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres",
+)
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

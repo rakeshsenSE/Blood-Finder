@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="BloodFinder — Bangladesh's trusted platform to find verified blood donors, request emergency blood, and save lives. Search by blood group, district, and division.">
-  <meta name="keywords" content="blood donation, blood donor, Bangladesh, blood bank, emergency blood, O+, A+, B+, AB+, Dhaka, Chittagong">
+  <meta name="description" content="ব্লাডফাইন্ডার — বাংলাদেশের বিশ্বস্ত প্ল্যাটফর্ম যেখানে যাচাইকৃত রক্তদাতা খুঁজুন এবং জীবন বাঁচান।">
+  <meta name="keywords" content="রক্তদান, রক্তদাতা, বাংলাদেশ, ব্লাড ব্যাংক, O+, A+, B+, AB+, ঢাকা, চট্টগ্রাম">
   <meta name="author" content="BloodFinder Bangladesh">
-  <title>BloodFinder — Find Blood Donors & Save Lives in Bangladesh</title>
+  <title>ব্লাডফাইন্ডার — বাংলাদেশে রক্তদাতা খুঁজুন ও জীবন বাঁচান</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,11 +34,9 @@
       <nav class="nav-links" id="navLinks">
         <a href="#hero" class="active">Home</a>
         <a href="#donors">Find Donors</a>
-        <a href="#emergency">Emergency Feed</a>
         <a href="#bloodBanks">Blood Banks</a>
         <a href="#" data-open-register>Register</a>
         <button id="nav-signin-btn" class="btn btn-outline">Sign In</button>
-        <button class="btn-cta" data-open-request>🚨 Request Blood Now</button>
       </nav>
 
       <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
@@ -54,25 +52,25 @@
     <div class="container">
       <div class="hero-badge">
         <span class="pulse-dot"></span>
-        Saving lives across Bangladesh
+        সারা বাংলাদেশে জীবন বাঁচাচ্ছি
       </div>
 
       <h1 class="hero-title">
-        Every Drop Counts.<br>
-        Be a <span class="highlight">Lifesaver</span> Today.
+        প্রতিটি ফোঁটা গুরুত্বপূর্ণ।<br>
+        আজই একজন <span class="highlight">জীবনরক্ষাকারী</span> হন।
       </h1>
 
       <p class="hero-subtitle">
-        Find verified blood donors near you in seconds. Connect, donate, and help save lives — because someone's life depends on your generosity.
+        মুহূর্তের মধ্যে কাছের যাচাইকৃত রক্তদাতা খুঁজুন। সংযুক্ত হন, রক্ত দিন এবং জীবন বাঁচাতে সাহায্য করুন — কারণ কারো জীবন আপনার উদারতার উপর নির্ভর করছে।
       </p>
 
       <!-- Smart Search Box -->
-      <div class="hero-search">
+      <form class="hero-search" id="searchForm" onsubmit="return false;">
         <div class="search-grid">
           <div class="search-field">
-            <label for="searchBlood">Blood Group</label>
+            <label for="searchBlood">রক্তের গ্রুপ</label>
             <select id="searchBlood" aria-label="Filter by Blood Group">
-              <option value="">All Groups</option>
+              <option value="">সকল গ্রুপ</option>
               <option value="A+">A+</option>
               <option value="A-">A-</option>
               <option value="B+">B+</option>
@@ -84,17 +82,13 @@
             </select>
           </div>
           <div class="search-field">
-            <label for="searchDivision">Division</label>
-            <input type="text" id="searchDivision" placeholder="Enter Division" aria-label="Filter by Division" autocomplete="off">
+            <label for="searchDistrict">জেলা</label>
+            <input type="text" id="searchDistrict" placeholder="জেলার নাম লিখুন" aria-label="Filter by District" autocomplete="off">
           </div>
-          <div class="search-field">
-            <label for="searchDistrict">District</label>
-            <input type="text" id="searchDistrict" placeholder="Enter District" aria-label="Filter by District" autocomplete="off">
-          </div>
-          <button class="btn-location" id="btnGeoLocation" title="Auto-detect my location" aria-label="Auto-detect my location">📍 Location</button>
-          <button class="btn-search" id="btnSearch" aria-label="Search donors">🔍 Search</button>
+          <button type="button" class="btn-location" id="btnGeoLocation" title="আমার অবস্থান স্বয়ংক্রিয়ভাবে সনাক্ত করুন" aria-label="Auto-detect my location">📍 অবস্থান</button>
+          <button type="submit" class="btn-search" id="btnSearch" aria-label="Search donors">🔍 খুঁজুন</button>
         </div>
-      </div>
+      </form>
     </div>
   </section>
 
@@ -106,14 +100,7 @@
           <div class="stat-icon red">❤️</div>
           <div>
             <div class="stat-number" id="count-donors" data-suffix="+">0</div>
-            <div class="stat-label">Registered Donors</div>
-          </div>
-        </div>
-        <div class="stat-card animate-on-scroll">
-          <div class="stat-icon blue">🚨</div>
-          <div>
-            <div class="stat-number" id="count-requests">0</div>
-            <div class="stat-label">Active Requests</div>
+            <div class="stat-label">নিবন্ধিত রক্তদাতা</div>
           </div>
         </div>
       </div>
@@ -124,9 +111,9 @@
   <section class="donors" id="donors">
     <div class="container">
       <div class="section-header">
-        <span class="section-badge">🔎 Donor Directory</span>
-        <h2 class="section-title">Find Your Blood Match</h2>
-        <p class="section-subtitle">Browse verified donors ready to help. Filter by blood group, division, or district to find your perfect match.</p>
+        <span class="section-badge">🔎 দাতার ডিরেক্টরি</span>
+        <h2 class="section-title">আপনার রক্তের মিল খুঁজুন</h2>
+        <p class="section-subtitle">সাহায্য করতে প্রস্তুত যাচাইকৃত দাতাদের ব্রাউজ করুন। আপনার নিখুঁত মিল খুঁজে পেতে রক্তের গ্রুপ বা জেলা দিয়ে ফিল্টার করুন।</p>
       </div>
       <div class="donors-grid" id="donorsGrid">
         <!-- Rendered by JS -->
@@ -139,11 +126,11 @@
     <div class="container">
       <div class="eligibility-card animate-on-scroll">
         <div class="calc-icon">🧮</div>
-        <h2>Donation Eligibility Check</h2>
-        <p>Enter your last donation date to see if you're eligible to donate blood today.</p>
+        <h2>রক্তদানের যোগ্যতা যাচাই</h2>
+        <p>আপনি আজ রক্ত দিতে যোগ্য কিনা তা জানতে আপনার শেষ রক্তদানের তারিখ লিখুন।</p>
         <div class="calc-form">
-          <input type="date" id="calcLastDonation" aria-label="Last donation date">
-          <button class="btn-calculate" id="btnCalcEligibility">Check Now</button>
+          <input type="date" id="lastDonationDate" class="date-input" required>
+          <button class="btn-calculate" id="btnCalcEligibility">এখনই যাচাই করুন</button>
         </div>
         <div class="calc-result" id="calcResult"></div>
       </div>
@@ -154,9 +141,9 @@
   <section class="nearby-search" id="emergency">
     <div class="container">
       <div class="section-header">
-        <span class="section-badge">📍 Nearby Search</span>
-        <h2 class="section-title">Find Donors Near Your Hospital</h2>
-        <p class="section-subtitle">Enter a hospital name or nearby area to instantly find blood donors in that location.</p>
+        <span class="section-badge">📍 কাছের অনুসন্ধান</span>
+        <h2 class="section-title">আপনার হাসপাতালের কাছের দাতা খুঁজুন</h2>
+        <p class="section-subtitle">সেই এলাকায় তাৎক্ষণিকভাবে রক্তদাতা খুঁজে পেতে একটি হাসপাতালের নাম বা কাছের এলাকা লিখুন।</p>
       </div>
 
       <div class="nearby-search-card">
@@ -167,22 +154,24 @@
               type="text"
               id="hospital-search-input"
               class="nearby-input"
-              placeholder="Enter Hospital Name or Nearby Area, e.g. Chittagong Medical"
+              placeholder="কাছের এলাকা লিখুন, যেমন: Patiya,Chittagong"
               autocomplete="off"
               aria-label="Enter hospital or area name"
             >
           </div>
           <select id="search-radius" class="nearby-radius-select" aria-label="Search distance radius">
-            <option value="2">Within 2 km</option>
-            <option value="5" selected>Within 5 km</option>
-            <option value="all">All Nearby Area</option>
+            <option value="2">২ কিমি-এর মধ্যে</option>
+            <option value="5" selected>৫ কিমি-এর মধ্যে</option>
+            <option value="all">সকল কাছের এলাকা</option>
           </select>
-          <button id="btn-geo-nearby" class="btn-geo-nearby" title="Use my current GPS location" aria-label="Use my current GPS location">
-            📍 Near Me
+          <button id="btn-geo-nearby" class="btn-geo-nearby" title="আমার বর্তমান GPS অবস্থান ব্যবহার করুন" aria-label="Use my current GPS location">
+            📍 কাছে আমার
           </button>
-          <button id="btn-search-nearby" class="btn-nearby-search" aria-label="Search nearby donors">
-            🔍 Search Nearby Donors
-          </button>
+          <div class="nearby-btn-wrapper">
+            <button id="btn-search-nearby" class="btn-nearby-search" aria-label="Search nearby donors">
+              🔍 কাছের দাতা খুঁজুন
+            </button>
+          </div>
         </div>
         <div id="hospital-donors-results" class="hospital-results-container">
           <!-- Rendered by JS -->
@@ -191,14 +180,13 @@
     </div>
   </section>
 
-
   <!-- ===== BLOOD BANK DIRECTORY ===== -->
   <section class="blood-banks" id="bloodBanks">
     <div class="container">
       <div class="section-header">
-        <span class="section-badge">🏛️ Directory</span>
-        <h2 class="section-title">Blood Bank Directory</h2>
-        <p class="section-subtitle">Find major blood banks across Bangladesh with quick call access and service information.</p>
+        <span class="section-badge">🏛️ ডিরেক্টরি</span>
+        <h2 class="section-title">ব্লাড ব্যাংক ডিরেক্টরি</h2>
+        <p class="section-subtitle">দ্রুত কল অ্যাক্সেস এবং সেবার তথ্যসহ সারা বাংলাদেশের প্রধান ব্লাড ব্যাংকগুলো খুঁজুন।</p>
       </div>
       <div class="banks-grid" id="banksGrid">
         <!-- Rendered by JS -->
@@ -210,24 +198,24 @@
   <div class="modal-overlay" id="registerModal">
     <div class="modal">
       <div class="modal-header">
-        <h2>🩸 Register as Donor</h2>
+        <h2>🩸 দাতা হিসেবে নিবন্ধন করুন</h2>
         <button class="modal-close" id="closeRegister" aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
         <form id="registerForm">
           <div class="form-group">
-            <label for="regName">Full Name *</label>
-            <input type="text" id="regName" placeholder="e.g. Rakesh sen" required>
+            <label for="regName">পূর্ণ নাম *</label>
+            <input type="text" id="regName" placeholder="যেমন: রাকেশ সেন" required>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="regPhone">Phone Number *</label>
+              <label for="regPhone">ফোন নম্বর *</label>
               <input type="tel" id="regPhone" placeholder="+880 1XXX-XXXXXX" required>
             </div>
             <div class="form-group">
-              <label for="regBlood">Blood Group *</label>
+              <label for="regBlood">রক্তের গ্রুপ *</label>
               <select id="regBlood" required>
-                <option value="">Select</option>
+                <option value="">নির্বাচন করুন</option>
                 <option value="A+">A+</option>
                 <option value="A-">A-</option>
                 <option value="B+">B+</option>
@@ -241,89 +229,27 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="regDistrict">District *</label>
+              <label for="regDistrict">জেলা *</label>
               <select id="regDistrict" required>
-                <option value="">Select Division</option>
+                <option value="">বিভাগ নির্বাচন করুন</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="regUpazila">Upazila</label>
-              <input type="text" id="regUpazila" placeholder="e.g. Mirpur">
+              <label for="regUpazila">উপজেলা</label>
+              <input type="text" id="regUpazila" placeholder="যেমন: মিরপুর">
             </div>
           </div>
           <div class="form-group">
-            <label for="regLastDonation">Last Donation Date</label>
+            <label for="regLastDonation">শেষ রক্তদানের তারিখ</label>
             <input type="date" id="regLastDonation">
           </div>
           <div class="form-group">
             <div class="checkbox-group">
               <input type="checkbox" id="regAgree">
-              <label for="regAgree">I agree that my information will be shared with blood seekers on BloodFinder. My privacy is respected, and data will not be sold or misused.</label>
+              <label for="regAgree">আমি সম্মত যে আমার তথ্য ব্লাডফাইন্ডারে রক্তসন্ধানকারীদের সাথে শেয়ার করা হবে। আমার গোপনীয়তা সম্মানিত হবে এবং ডেটা বিক্রি বা অপব্যবহার করা হবে না।</label>
             </div>
           </div>
-          <button type="submit" class="btn-submit">Register as Donor</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== REQUEST BLOOD MODAL ===== -->
-  <div class="modal-overlay" id="requestModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>🚨 Request Blood</h2>
-        <button class="modal-close" id="closeRequest" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <form id="requestForm">
-          <div class="form-group">
-            <label for="reqPatient">Patient Name *</label>
-            <input type="text" id="reqPatient" placeholder="Patient's full name" required>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="reqBlood">Blood Group Needed *</label>
-              <select id="reqBlood" required>
-                <option value="">Select</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="reqBags">Bags Needed *</label>
-              <input type="number" id="reqBags" min="1" max="20" placeholder="e.g. 2" required>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="reqHospital">Hospital Name *</label>
-            <input type="text" id="reqHospital" placeholder="e.g. Dhaka Medical College" required>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="reqUrgency">Urgency Level *</label>
-              <select id="reqUrgency" required>
-                <option value="">Select</option>
-                <option value="Immediate">🚨 Immediate</option>
-                <option value="Within 12 Hours">⚠️ Within 12 Hours</option>
-                <option value="Within 24 Hours">📋 Within 24 Hours</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="reqContact">Contact Number *</label>
-              <input type="tel" id="reqContact" placeholder="+880 1XXX-XXXXXX" required>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="reqNote">Additional Notes</label>
-            <textarea id="reqNote" placeholder="Any additional details about the patient or request..."></textarea>
-          </div>
-          <button type="submit" class="btn-submit">Submit Urgent Request</button>
+          <button type="submit" class="btn-submit">দাতা হিসেবে নিবন্ধন করুন</button>
         </form>
       </div>
     </div>
@@ -333,21 +259,21 @@
   <div class="modal-overlay" id="signin-modal">
     <div class="modal modal-signin">
       <div class="modal-header">
-        <h2>⚡ Quick Emergency Access</h2>
+        <h2>⚡ দ্রুত জরুরি অ্যাক্সেস</h2>
         <button class="modal-close" id="close-modal-btn" aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
-        <p class="signin-desc">Enter your email or phone number for instant access to donor contact details. No passwords or OTP required.</p>
+        <p class="signin-desc">দাতার যোগাযোগের তথ্যে তাৎক্ষণিক অ্যাক্সেসের জন্য আপনার ইমেইল বা ফোন নম্বর লিখুন। কোনো পাসওয়ার্ড বা OTP প্রয়োজন নেই।</p>
         <form id="signin-form" onsubmit="return false;">
           <div class="form-group">
-            <label for="user-email-input">Email or Phone Number *</label>
-            <input type="text" id="user-email-input" placeholder="e.g. 01712345678 or name@example.com" autocomplete="on" autofocus required>
+            <label for="user-email-input">ইমেইল বা ফোন নম্বর *</label>
+            <input type="text" id="user-email-input" placeholder="যেমন: 01712345678 বা name@example.com" autocomplete="on" autofocus required>
           </div>
-          <button type="submit" class="btn-submit btn-signin-continue" id="signin-submit-btn">Continue ➔</button>
+          <button type="submit" class="btn-submit btn-signin-continue" id="signin-submit-btn">এগিয়ে যান ➔</button>
         </form>
 
         <div class="signin-divider">
-          <span>OR</span>
+          <span>অথবা</span>
         </div>
 
         <div id="g_id_signin_container"></div>
@@ -359,7 +285,7 @@
             <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
-          Sign in with Google
+          Google দিয়ে সাইন ইন করুন
         </button>
       </div>
     </div>
@@ -375,70 +301,64 @@
             <div class="logo-icon">🩸</div>
             Blood<span>Finder</span>
           </a>
-          <p>Bangladesh's trusted platform for connecting blood donors with those in need. Every drop counts — be the reason someone lives.</p>
-          <div class="footer-social">
-            <a href="#" aria-label="Facebook">📘</a>
-            <a href="#" aria-label="Twitter">🐦</a>
-            <a href="#" aria-label="Instagram">📷</a>
-            <a href="#" aria-label="YouTube">🎥</a>
-          </div>
+          <p>রক্তদাতাদের সাথে প্রয়োজনগ্রস্তদের সংযুক্ত করার জন্য বাংলাদেশের বিশ্বস্ত প্ল্যাটফর্ম। প্রতিটি ফোঁটা গুরুত্বপূর্ণ — কারো বেঁচে থাকার কারণ হন।</p>
         </div>
 
         <!-- Quick Links -->
         <div class="footer-col">
-          <h4>Quick Links</h4>
+          <h4>দ্রুত লিঙ্ক</h4>
           <ul>
-            <li><a href="#hero">Home</a></li>
-            <li><a href="#donors">Find Donors</a></li>
-            <li><a href="#emergency">Emergency Feed</a></li>
-            <li><a href="#bloodBanks">Blood Banks</a></li>
-            <li><a href="#eligibility">Eligibility Check</a></li>
+            <li><a href="#hero">হোম</a></li>
+            <li><a href="#donors">দাতা খুঁজুন</a></li>
+            <li><a href="#emergency">কাছের দাতা</a></li>
+            <li><a href="#bloodBanks">ব্লাড ব্যাংক</a></li>
+            <li><a href="#eligibility">যোগ্যতা যাচাই</a></li>
           </ul>
         </div>
 
         <!-- Resources -->
         <div class="footer-col">
-          <h4>Resources</h4>
+          <h4>রিসোর্স</h4>
           <ul>
-            <li><a href="#">Donation Guidelines</a></li>
-            <li><a href="#">Blood Facts</a></li>
-            <li><a href="#">FAQs</a></li>
-            <li><a href="#">Privacy Policy</a></li>
-            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">রক্তদানের নির্দেশিকা</a></li>
+            <li><a href="#">রক্ত সম্পর্কিত তথ্য</a></li>
+            <li><a href="#">সাধারণ প্রশ্নোত্তর</a></li>
+            <li><a href="#">গোপনীয়তা নীতি</a></li>
+            <li><a href="#">সেবার শর্তাবলী</a></li>
           </ul>
         </div>
 
         <!-- Emergency Helplines -->
         <div class="footer-col">
-          <h4>Emergency Helplines</h4>
+          <h4>জরুরি হেল্পলাইন</h4>
           <div class="footer-helpline">
             <span class="icon">📞</span>
             <div class="info">
               <strong>999</strong>
-              National Emergency Service
+              জাতীয় জরুরি সেবা
             </div>
           </div>
           <div class="footer-helpline">
             <span class="icon">🏥</span>
             <div class="info">
               <strong>16263</strong>
-              Health Helpline (DGHS)
+              স্বাস্থ্য হেল্পলাইন (DGHS)
             </div>
           </div>
           <div class="footer-helpline">
             <span class="icon">🩸</span>
             <div class="info">
               <strong>09612-010101</strong>
-              Quantum Blood Helpline
+              কোয়ান্টাম ব্লাড হেল্পলাইন
             </div>
           </div>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <p>© 2026 BloodFinder Bangladesh. All rights reserved.</p>
+        <p>© ২০২৬ BloodFinder Bangladesh। ❤️ দিয়ে তৈরি করেছেন <strong><b>Rakesh</b></strong>। শুভ দিন।</p>
         <p class="disclaimer">
-          ⚠️ Disclaimer: BloodFinder is a voluntary platform. We are not a medical service provider. Always consult a medical professional. Donor data is shared with consent.
+          ⚠️ দাবিত্যাগ: ব্লাডফাইন্ডার একটি স্বেচ্ছাসেবী প্ল্যাটফর্ম। আমরা কোনো চিকিৎসা সেবা প্রদানকারী নই। সর্বদা একজন চিকিৎসা পেশাদারের পরামর্শ নিন। দাতার তথ্য সম্মতির ভিত্তিতে শেয়ার করা হয়।
         </p>
       </div>
     </div>
