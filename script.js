@@ -5,7 +5,7 @@
    =================================================================== */
 
 // ===== API BASE URL =====
-const API_BASE = "https://ckl15rq6-8000.asse.devtunnels.ms/api/v1";
+const API_BASE = "https://127.0.0.1:8000/api/v1";
 
 // ===== IN-MEMORY CACHE (populated from API) =====
 let ALL_DONORS = [];
