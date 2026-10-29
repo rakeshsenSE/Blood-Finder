@@ -1,13 +1,7 @@
-/* ===================================================================
-   BloodFinder — Vanilla JavaScript
-   Features: Animated counters, filtering, modals, eligibility calc,
-   accordion, scroll animations, toast notifications
-   =================================================================== */
 
-// ===== API BASE URL =====
-const API_BASE = "https://127.0.0.1:8000/api/v1";
+// Localhost-এর জন্য সঠিক API Base URL
+const API_BASE = "http://127.0.0.1:8000/api/v1";
 
-// ===== IN-MEMORY CACHE (populated from API) =====
 let ALL_DONORS = [];
 
 const DIVISIONS = ["Dhaka", "Chittagong", "Rajshahi", "Sylhet", "Khulna", "Barishal", "Rangpur", "Mymensingh"];
@@ -48,9 +42,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ===== API HELPERS =====
 async function apiFetch(path, options = {}) {
   try {
+    // Only set Content-Type for requests that carry a body (POST, PUT, PATCH).
+    // Setting Content-Type on a GET makes it a "non-simple" CORS request and
+    // triggers an OPTIONS preflight. Without a body, no Content-Type is needed.
+    const method = (options.method || "GET").toUpperCase();
+    const needsContentType = ["POST", "PUT", "PATCH"].includes(method);
+
+    const mergedHeaders = {
+      ...(needsContentType ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {}),
+    };
+
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json" },
       ...options,
+      headers: mergedHeaders,
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -135,9 +140,11 @@ function renderNavAuth() {
 // ===== LIVE STATS — loaded from backend =====
 async function loadStats() {
   try {
-    // Stats endpoint is kept but Lives Saved card has been removed
     const stats = await apiFetch("/stats");
-    void stats; // intentionally unused after Lives Saved removal
+    // Update the registered donors counter shown in the hero/stats section
+    if (stats && typeof stats.total_donors === 'number') {
+      updateStatUI('count-donors', stats.total_donors);
+    }
   } catch (e) {
     console.error("Could not load stats:", e);
   }

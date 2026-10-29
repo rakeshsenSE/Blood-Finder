@@ -1,8 +1,4 @@
-"""BloodFinder Bangladesh — FastAPI application entrypoint.
 
-Run with:  uvicorn main:app --reload
-Docs:      http://localhost:8000/docs
-"""
 
 from contextlib import asynccontextmanager
 
@@ -32,13 +28,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ---------- CORS ----------
+# ------------ CORS ------------
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # must be False when allow_origins=["*"]
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # সব অরিজিন এলাউ করবে
+    allow_credentials=False,  # allow_origins=["*"] থাকলে এটি অবশ্যই False হতে হবে
+    allow_methods=["*"],  # GET, POST, OPTIONS, PUT ইত্যাদি সব মেথড এলাউ
+    allow_headers=["*"],  # সব ধরনের হেডার এলাউ
 )
 
 API = "/api/v1"
